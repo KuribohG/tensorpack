@@ -53,7 +53,7 @@ def get_iter_quantize(bitW, bitA, num_iter):
         x = tf.tanh(x)
         x = tf.transpose(x, perm=[3, 2, 0, 1])
         # XXX: how to set grad
-        w = tf.reshape(x, [64, -1])
+        w = tf.reshape(x, tf.stack([tf.shape(x)[0], -1]))
         a2 = tf.expand_dims(tf.reduce_mean(w, axis=1), 1)
         a1 = tf.expand_dims(4 * tf.reduce_mean(tf.abs(w - a2), axis=1), 1)
         b = quantize(tf.clip_by_value((w - a2) / a1, -1, 1) * 0.5, bitW) * 2

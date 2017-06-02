@@ -113,33 +113,38 @@ class Model(ModelDesc):
                          nr_c2_conv_5x5,
                          nr_c3_conv_1x1,
                          nonlinearity=tf.nn.relu,
-                         internal_nonlin=None):
+                         internal_nonlin=None,
+                         do_proc=True):
             if internal_nonlin is None:
                 internal_nonlin = nonlinearity
             outputs = []
             with tf.variable_scope(name) as scope:
                 c0 = Conv2D('column_0_conv_1x1', x, nr_c0_conv_1x1, 1)
                 c0 = BatchNorm('bn_0_1x1', c0)
-                c0 = fa(c0)
+                if do_proc:
+                    c0 = activate(c0)
                 outputs.append(c0)
                 c1_1x1 = Conv2D('column_1_conv_1x1', x, nr_c1_conv_1x1, 1)
                 c1_1x1 = BatchNorm('bn_1_1x1', c1_1x1)
-                c1_1x1 = fa(c1_1x1)
+                c1_1x1 = activate(c1_1x1)
                 c1_3x3 = Conv2D('column_1_conv_3x3', c1_1x1, nr_c1_conv_3x3, 3)
                 c1_3x3 = BatchNorm('bn_1_3x3', c1_3x3)
-                c1_3x3 = fa(c1_3x3)
+                if do_proc:
+                    c1_3x3 = activate(c1_3x3)
                 outputs.append(c1_3x3)
                 c2_1x1 = Conv2D('column_2_conv_1x1', x, nr_c2_conv_1x1, 1)
                 c2_1x1 = BatchNorm('bn_2_1x1', c2_1x1)
-                c2_1x1 = fa(c2_1x1)
+                c2_1x1 = activate(c2_1x1)
                 c2_5x5 = Conv2D('column_2_conv_5x5', c2_1x1, nr_c2_conv_5x5, 5)
                 c2_5x5 = BatchNorm('bn_2_5x5', c2_5x5)
-                c2_5x5 = fa(c2_5x5)
+                if do_proc:
+                    c2_5x5 = activate(c2_5x5)
                 outputs.append(c2_5x5)
                 c3_maxpool = MaxPooling('column_3_maxpool', x, 3, 1, padding='SAME')
                 c3_1x1 = Conv2D('column_3_conv_1x1', c3_maxpool, nr_c3_conv_1x1, 1)
                 c3_1x1 = BatchNorm('bn_3_1x1', c3_1x1)
-                c3_1x1 = fa(c3_1x1)
+                if do_proc:
+                    c3_1x1 = activate(c3_1x1)
                 outputs.append(c3_1x1)
                 return tf.concat(outputs, 3, name='concat')
 
@@ -169,9 +174,9 @@ class Model(ModelDesc):
             l = inception_bn('inception_4_5', l, 256, 160, 320, 32, 128, 128, nl)
             l = MaxPooling('pool4', l, 3, 2, padding='SAME')
             l = inception_bn('inception_5_1', l, 256, 160, 320, 32, 128, 128, nl)
-            l = inception_bn('inception_5_2', l, 384, 192, 384, 48, 128, 128, nl)
+            l = inception_bn('inception_5_2', l, 384, 192, 384, 48, 128, 128, nl, do_proc=False)
             l = GlobalAvgPooling('gap', l)
-            l = fa(l * 0.1)
+            l = activate(l)
             l = FullyConnected('fct', l, 1000, use_bias=True)
             logits = l
 
@@ -268,7 +273,7 @@ def get_config():
             ModelSaver(),
             # HumanHyperParamSetter('learning_rate'),
             ScheduledHyperParamSetter(
-                'learning_rate', [(0, 1e-3), (30, 1e-4), (60, 1e-5), (90, 1e-6)]),
+                'learning_rate', [(0, 1e-3), (30, 1e-4), (40, 1e-5)]),
             InferenceRunner(data_test,
                             [ScalarStats('cost'),
                              ClassificationError('wrong-top1', 'val-error-top1'),
